@@ -195,8 +195,8 @@
 			Telegram.WebApp.ready();
 			Telegram.WebApp.expand();
 
-			// Fetch symbols from the API using the ngrok URL
-			fetch('https://clear-sound-mako.ngrok-free.app/api/glitter.jsp?call=symbols')
+			// Fetch symbols from the API using the new endpoint
+			fetch('https://izzy.averkov.net/api/glitter.jsp?call=symbols')
 				.then(response => response.json())
 				.then(data => {
 					const loadingElement = document.getElementById('loading');
