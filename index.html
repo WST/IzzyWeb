@@ -3,22 +3,274 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Izzy Moonbow</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<script src="https://telegram.org/js/telegram-web-app.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
-	<link rel="stylesheet" type="text/css" href="/static/css/main.css"/>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+	<style>
+		body {
+			background-color: #000;
+			color: white;
+			padding-bottom: 80px; /* Height of the navbar */
+		}
+		.navbar {
+			position: fixed;
+			bottom: 0;
+			width: 100%;
+			height: 80px;
+			background-color: #000 !important;
+			margin-bottom: 32px;
+		}
+		.nav-item {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			flex: 1;
+		}
+		.nav-link {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			text-align: center;
+			font-size: 0.8rem;
+			color: #fff !important;
+			transition: background-color 0.3s ease;
+			width: 100%;
+			height: 100%;
+			padding: 10px 0;
+			border-radius: 15px; /* Add this line for rounded corners */
+			margin: 5px; /* Add some margin for spacing */
+		}
+		.nav-link i {
+			font-size: 1.5rem;
+			margin-bottom: 0.25rem;
+		}
+		.nav-link.active {
+			background-color: #333;
+			color: #fff !important;
+			border-radius: 15px; /* Ensure active items also have rounded corners */
+		}
+		.tab-content {
+			height: calc(100vh - 80px);
+			overflow-y: auto;
+			padding-top: 20px;
+		}
+		.crypto-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+			gap: 15px;
+			padding: 15px;
+		}
+		.crypto-card {
+			background-color: #333;
+			border-radius: 10px;
+			padding: 15px;
+			text-align: center;
+			cursor: pointer;
+			transition: background-color 0.3s ease;
+		}
+		.crypto-card:hover {
+			background-color: #444;
+		}
+		.crypto-card i {
+			font-size: 2em;
+			margin-bottom: 10px;
+		}
+		.crypto-card h3 {
+			margin: 0;
+			font-size: 1.2em;
+		}
+		.crypto-settings {
+			display: none;
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background-color: rgba(0, 0, 0, 0.9);
+			z-index: 1000;
+			overflow-y: auto;
+			padding: 20px;
+		}
+		.crypto-settings h2 {
+			margin-top: 0;
+		}
+		.close-settings {
+			position: absolute;
+			top: 10px;
+			right: 10px;
+			font-size: 24px;
+			cursor: pointer;
+		}
+		#loading, #error, #noPairs {
+			text-align: center;
+			padding: 20px;
+			font-size: 1.2em;
+		}
+		.error {
+			color: red;
+		}
+	</style>
 </head>
-<script type="text/javascript">
-	Telegram.WebApp.ready();
-	Telegram.WebApp.MainButton.setText('Сохранить настройки').show().onClick(function () {
-		const data = JSON.stringify({});
-		Telegram.WebApp.sendData(data);
-		Telegram.WebApp.close();
-	});
-</script>
 <body>
-<div align="center">foo bar</div>
+	<div id="app-content">
+		<div class="container h-100">
+			<div class="tab-content" id="navTabContent">
+				<div class="tab-pane fade show active" id="symbols" role="tabpanel" aria-labelledby="symbols-tab">
+					<h2>Символы</h2>
+					<div id="loading">Loading currency pairs...</div>
+					<div id="error" class="error" style="display: none;"></div>
+					<div id="noPairs" style="display: none; text-align: center; padding: 20px;">
+						<img src="/static/images/no_pairs.png" alt="No pairs available" style="width: 100px; height: 100px;">
+						<p>Нет доступных пар</p>
+					</div>
+					<div id="cryptoGrid" class="crypto-grid">
+						<!-- Currency pairs will be dynamically inserted here -->
+					</div>
+				</div>
+				<div class="tab-pane fade" id="notifications" role="tabpanel" aria-labelledby="notifications-tab">
+					<h2>Уведомления</h2>
+					<p>Здесь можно будет настроить уведомления и их пороги срабатывания</p>
+					<button class="btn btn-primary btn-save" onclick="saveSettings('notifications')">Save Settings</button>
+				</div>
+				<div class="tab-pane fade" id="analysis" role="tabpanel" aria-labelledby="analysis-tab">
+					<h2>Анализ</h2>
+					<p>Здесь можно будет посмотреть анализ рынка</p>
+				</div>
+				<div class="tab-pane fade" id="help" role="tabpanel" aria-labelledby="help-tab">
+					<h2>Справка</h2>
+					<p>
+						Izzy Moonbow — бот, предназначенный для скрининга криптовалютного рынка и отправки уведомлений о значительных изменениях цены, росте открытого интереса и появлении имбалансов на графике. Бот постоянно наблюдает за рыночной ситуацией по тем парам, которые представляют основной интерес для его владельца и строит разнообразные отчёты, доступные во вкладке «анализ». На вкладке «уведомления» можно подписаться на регулярные оповещения о важных изменениях на рынке, а также отписаться от тех или иных уведомлений.
+					</p>
+				</div>
+			</div>
+		</div>
+
+		<!-- Crypto Settings Pages -->
+		<div id="cryptoSettings" class="crypto-settings">
+			<span class="close-settings" onclick="closeSettings()">&times;</span>
+			<h2 id="settingsTitle"></h2>
+			<p>Здесь будут настройки для выбранной криптовалютной пары.</p>
+			<!-- Add more settings fields here -->
+			<button class="btn btn-primary" onclick="saveSymbolSettings()">Сохранить настройки</button>
+		</div>
+
+		<nav class="navbar navbar-expand navbar-dark bg-dark">
+			<div class="container-fluid justify-content-around">
+				<ul class="navbar-nav w-100 justify-content-between nav" role="tablist">
+					<li class="nav-item" role="presentation">
+						<a class="nav-link active" id="symbols-tab" data-bs-toggle="tab" href="#symbols" role="tab" aria-controls="symbols" aria-selected="true">
+							<i class="fas fa-chart-line"></i>
+							Символы
+						</a>
+					</li>
+					<li class="nav-item" role="presentation">
+						<a class="nav-link" id="notifications-tab" data-bs-toggle="tab" href="#notifications" role="tab" aria-controls="notifications" aria-selected="false">
+							<i class="fas fa-bell"></i>
+							Уведомления
+						</a>
+					</li>
+					<li class="nav-item" role="presentation">
+						<a class="nav-link" id="analysis-tab" data-bs-toggle="tab" href="#analysis" role="tab" aria-controls="analysis" aria-selected="false">
+							<i class="fas fa-chart-bar"></i>
+							Анализ
+						</a>
+					</li>
+					<li class="nav-item" role="presentation">
+						<a class="nav-link" id="help-tab" data-bs-toggle="tab" href="#help" role="tab" aria-controls="help" aria-selected="false">
+							<i class="fas fa-question-circle"></i>
+							Справка
+						</a>
+					</li>
+				</ul>
+			</div>
+		</nav>
+	</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			Telegram.WebApp.ready();
+			Telegram.WebApp.expand();
+
+			// Fetch currency pairs from the API
+			fetch('/api/glitter.jsp?call=pairs')
+				.then(response => response.json())
+				.then(data => {
+					const loadingElement = document.getElementById('loading');
+					const cryptoGrid = document.getElementById('cryptoGrid');
+					const noPairsElement = document.getElementById('noPairs');
+					
+					loadingElement.style.display = 'none';
+					
+					if (data.length === 0) {
+						noPairsElement.style.display = 'block';
+						cryptoGrid.style.display = 'none';
+					} else {
+						noPairsElement.style.display = 'none';
+						cryptoGrid.style.display = 'grid';
+						cryptoGrid.innerHTML = '';  // Clear any existing content
+						data.forEach(pair => {
+							const card = document.createElement('div');
+							card.className = 'crypto-card';
+							card.onclick = () => openSettings(pair.symbol);
+							
+							const icon = document.createElement('i');
+							icon.className = getIconClass(pair.symbol);
+							
+							const title = document.createElement('h3');
+							title.textContent = pair.symbol;
+							
+							card.appendChild(icon);
+							card.appendChild(title);
+							cryptoGrid.appendChild(card);
+						});
+					}
+				})
+				.catch(error => {
+					console.error('Error fetching currency pairs:', error);
+					const errorElement = document.getElementById('error');
+					errorElement.textContent = 'Error fetching currency pairs. Please try again later.';
+					errorElement.style.display = 'block';
+				});
+		});
+
+		function getIconClass(symbol) {
+			const iconMap = {
+				'BTC': 'fab fa-bitcoin',
+				'ETH': 'fab fa-ethereum',
+				'SOL': 'fas fa-sun',
+				'XMR': 'fas fa-user-secret',
+				'AVAX': 'fas fa-mountain',
+				'POPCAT': 'fas fa-cat',
+				'SUI': 'fas fa-cube',
+				'WIF': 'fas fa-wifi'
+			};
+			const baseCurrency = symbol.replace('USDT', '');
+			return iconMap[baseCurrency] || 'fas fa-coins';  // Default to a generic coin icon
+		}
+
+		function openSettings(symbol) {
+			document.getElementById('settingsTitle').textContent = `Настройки для ${symbol}`;
+			document.getElementById('cryptoSettings').style.display = 'block';
+		}
+
+		function closeSettings() {
+			document.getElementById('cryptoSettings').style.display = 'none';
+		}
+
+		function saveSymbolSettings() {
+			// Implement saving logic here
+			alert('Настройки сохранены');
+			closeSettings();
+		}
+
+		function saveSettings(tab) {
+			console.log(`Saving settings for ${tab} tab`);
+			alert(`Settings for ${tab} tab saved!`);
+		}
+	</script>
 </body>
-<script type="text/javascript">
-	Telegram.WebApp.expand();
-</script>
 </html>
